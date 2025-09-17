@@ -345,65 +345,6 @@ export default {
       });
     },
     
-    // 上传单个图片
-    uploadImage(fileItem) {
-      if (fileItem.url){
-        this.uploadedImageUrls.push(fileItem.url);
-        this.uploadCount++;
-        return;
-      }
-      // 标记为上传中
-      fileItem.status = 'uploading';
-      fileItem.message = '上传中...';
-      
-      const formData = new FormData();
-      formData.append('file', fileItem.file);
-      
-      this.$axios.post('http://parliy.com:89/api/upload/image', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-      .then(response => {
-        // 上传成功
-        fileItem.status = 'done';
-        fileItem.message = '上传成功';
-
-        fileItem.url = response.data.url;
-        
-        // 保存图片URL
-        this.uploadedImageUrls.push(response.data.url);
-        this.uploadCount++;
-        
-        // 检查是否所有图片都已上传完成
-        if (this.uploadCount === this.imageList.length) {
-          this.isUploading = false;
-          this.saveRecord();
-        }
-      })
-      .catch(error => {
-        // 上传失败
-        fileItem.status = 'failed';
-        fileItem.message = '上传失败';
-        this.uploadCount++;
-        
-        console.error('图片上传失败:', error);
-        Toast.fail('部分图片上传失败，请重试');
-        
-        // 检查是否所有图片都已处理完成
-        if (this.uploadCount === this.imageList.length) {
-          this.isUploading = false;
-          
-          // 如果有成功上传的图片，仍然允许保存
-          if (this.uploadedImageUrls.length > 0) {
-            Toast('部分图片上传失败，但仍可保存日记');
-            this.saveRecord();
-          } else {
-            Toast.fail('所有图片上传失败，请重试');
-          }
-        }
-      });
-    },
     
     // 图片删除前确认
     beforeDelete(fileItem) {
@@ -607,25 +548,191 @@ export default {
     },
     
     // 图片上传处理
-    afterRead(file) {
+    async afterRead(file) {
+      console.log('afterRead called with:', file);
+      
       // 统一处理为数组
       const files = Array.isArray(file) ? file : [file];
+      console.log('Files to process:', files.length);
       
-      // 过滤掉已经存在的文件（防止重复添加）
-      const newFiles = files.filter(fileItem => {
-        return !this.imageList.some(item => 
-          item.file && item.file.name === fileItem.file.name && 
-          item.file.size === fileItem.file.size
-        );
+      // 处理每个新文件
+      for (const fileItem of files) {
+        console.log('Processing file:', fileItem.file.name, 'Size:', fileItem.file.size);
+        
+        try {
+          let finalFile = fileItem.file;
+          
+          // 检查是否需要压缩（大于1.5MB）
+          if (fileItem.file.size > 1.5 * 1024 * 1024) {
+            console.log('File needs compression');
+            
+            // 压缩图片
+            finalFile = await this.compressImage(fileItem.file);
+            console.log('Compression complete. Original size:', fileItem.file.size, 'Compressed size:', finalFile.size);
+          } else {
+            console.log('File does not need compression');
+          }
+          
+          // 查重
+          const existingIndex = this.imageList.findIndex(item =>
+            item.file && item.file.name === fileItem.file.name
+          );
+          if (existingIndex !== -1) {
+            // 如果已经存在，替换为压缩后的文件
+            console.log('Replacing existing file with compressed version');
+            this.$set(this.imageList, existingIndex, {
+              file: finalFile,
+              content: URL.createObjectURL(finalFile),
+              status: 'pending',
+              message: '等待上传',
+              // 保留原有的URL（如果有）
+              url: this.imageList[existingIndex].url
+            });
+          } else {
+            // 如果不存在，添加新文件
+            this.imageList.push({
+              file: finalFile,
+              content: URL.createObjectURL(finalFile),
+              status: 'pending',
+              message: '等待上传'
+            });
+          }
+        } catch (error) {
+          console.error('图片处理失败:', error);
+          Toast.fail('图片处理失败，请重试');
+        }
+      }
+    },
+
+    // 图片压缩方法 - 简化版本
+    async compressImage(file, maxSizeMB = 1.5, maxWidth = 1920) {
+      console.log('Starting compression for:', file.name, 'Size:', file.size);
+      
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+          const img = new Image();
+          
+          img.onload = () => {
+            console.log('Image loaded. Original dimensions:', img.width, 'x', img.height);
+            
+            // 计算新尺寸，保持宽高比
+            let width = img.width;
+            let height = img.height;
+            
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+              console.log('Resizing to:', width, 'x', height);
+            }
+            
+            // 创建Canvas进行压缩
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            
+            try {
+              const ctx = canvas.getContext('2d');
+              
+              // 设置更高的质量参数
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = 'high';
+              
+              // 绘制图像到Canvas
+              ctx.drawImage(img, 0, 0, width, height);
+              
+              // 使用固定质量进行压缩
+              canvas.toBlob(
+                (blob) => {
+                  console.log('Compressed size:', blob.size);
+                  const compressedFile = new File([blob], file.name, {
+                    type: 'image/jpeg',
+                    lastModified: Date.now()
+                  });
+                  
+                  console.log('Final compressed size:', compressedFile.size);
+                  resolve(compressedFile);
+                },
+                'image/jpeg',
+                0.7 // 固定质量参数，可以根据需要调整
+              );
+            } catch (error) {
+              console.error('Canvas error:', error);
+              reject(error);
+            }
+          };
+          
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
       });
+    },
+
+    // 修改uploadImage方法，确保使用正确的文件
+    uploadImage(fileItem) {
+      // 如果已经有URL(可能是之前上传过的)，直接使用
+      if (fileItem.url) {
+        this.uploadedImageUrls.push(fileItem.url);
+        this.uploadCount++;
+        
+        // 检查是否所有图片都已上传完成
+        if (this.uploadCount === this.imageList.length) {
+          this.isUploading = false;
+          this.saveRecord();
+        }
+        return;
+      }
       
-      // 添加到图片列表
-      newFiles.forEach(fileItem => {
-        this.imageList.push({
-          ...fileItem,
-          status: 'pending', // 初始状态
-          message: '等待上传'
-        });
+      // 标记为上传中
+      fileItem.status = 'uploading';
+      fileItem.message = '上传中...';
+      
+      const formData = new FormData();
+      formData.append('file', fileItem.file);
+      
+      this.$axios.post('http://parliy.com:89/api/upload/image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      .then(response => {
+        // 上传成功处理
+        fileItem.status = 'done';
+        fileItem.message = '上传成功';
+        fileItem.url = response.data.url;
+        
+        this.uploadedImageUrls.push(response.data.url);
+        this.uploadCount++;
+        
+        // 检查是否所有图片都已上传完成
+        if (this.uploadCount === this.imageList.length) {
+          this.isUploading = false;
+          this.saveRecord();
+        }
+      })
+      .catch(error => {
+        // 上传失败处理
+        fileItem.status = 'failed';
+        fileItem.message = '上传失败';
+        this.uploadCount++;
+        
+        console.error('图片上传失败:', error);
+        
+        // 检查是否所有图片都已处理完成
+        if (this.uploadCount === this.imageList.length) {
+          this.isUploading = false;
+          
+          if (this.uploadedImageUrls.length > 0) {
+            Toast('部分图片上传失败，但仍可保存日记');
+            this.saveRecord();
+          } else {
+            Toast.fail('所有图片上传失败，请重试');
+          }
+        }
       });
     },
   }

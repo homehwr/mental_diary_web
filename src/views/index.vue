@@ -8,7 +8,7 @@
         </div>
         <div class="header-content">
           <div class="app-info">
-            <h1 class="app-name">物电学院格致心灵日记</h1>
+            <h1 class="app-name">格致心灵日记</h1>
             <p class="app-subtitle">记录成长每一刻</p>
           </div>
           <div>
@@ -314,7 +314,7 @@
 
       <!-- 制作人信息 -->
       <div class="creator-info">
-        <p>格致心灵日记 v1.0</p>
+        <p>格致心灵日记 v1.0.1</p>
         <p>© 2025 赣南师范大学物理与电子信息学院</p>
         <p>设计开发: 物公2201黄文瑞</p>
       </div>
@@ -705,7 +705,7 @@ export default {
 
 .header-background {
   background: linear-gradient(135deg, #3498db 0%, #2ecc71 100%);
-  padding: 20px 16px 15px;
+  padding: 16px 12px 14px;
   border-radius: 0 0 20px 20px;
   box-shadow: 0 4px 20px rgba(52, 152, 219, 0.3);
   color: white;
@@ -713,52 +713,69 @@ export default {
 
 .logo-container {
   text-align: center;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .university-logo {
-  height: 50px;
+  height: 45px;
   max-width: 100%;
   border-radius: 8px;
+  object-fit: contain;
 }
 
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: nowrap;
 }
 
 .app-info {
+  flex: 1;
+  min-width: 0; /* 防止文本溢出 */
   text-align: center;
-  width: 100%;
 }
 
 .app-name {
   margin: 0;
-  font-size: 29px;
+  font-size: 26px;
   font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .app-subtitle {
-  margin: 4px 0 0;
-  font-size: 14px;
+  margin: 2px 0 0;
+  font-size: 12px;
   opacity: 0.9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .current-time {
   text-align: right;
-  float: right;
+  flex-shrink: 0;
+  margin-left: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
 }
 
 .current-time .time {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: bold;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .current-time .date {
-  font-size: 14px;
-  margin-top: 4px;
+  font-size: 12px;
+  margin-top: 2px;
   opacity: 0.9;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 /* 登录状态栏 */
@@ -1250,7 +1267,7 @@ export default {
 /* 响应式调整 */
 @media (max-width: 480px) {
   .header-content {
-    flex-direction: column;
+    /* flex-direction: column; */
     align-items: flex-start;
   }
   
@@ -1276,12 +1293,8 @@ export default {
     line-height: 28px;
   }
   
-  .university-logo {
-    height: 40px;
-  }
-  
   .app-name {
-    font-size: 24px;
+    font-size: 25px;
   }
   
   .app-subtitle {
@@ -1388,5 +1401,60 @@ export default {
   font-weight: 500;
   transition: all 0.3s ease;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 400px) {
+  .header-background {
+    padding: 14px 10px 12px;
+  }
+  
+  .app-name {
+    font-size: 24px;
+  }
+  
+  .app-subtitle {
+    font-size: 11px;
+  }
+  
+  .current-time .time {
+    font-size: 15px;
+  }
+  
+  .current-time .date {
+    font-size: 11px;
+  }
+  
+}
+
+@media (max-width: 360px) {
+  .app-name {
+    font-size: 20px;
+  }
+  
+  .current-time .time {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 320px) {
+  .app-name {
+    font-size: 18px;
+  }
+  
+  .app-subtitle {
+    font-size: 10px;
+  }
+  
+  .current-time {
+    margin-left: 8px;
+  }
+  
+  .current-time .time {
+    font-size: 13px;
+  }
+  
+  .current-time .date {
+    font-size: 10px;
+  }
 }
 </style>
