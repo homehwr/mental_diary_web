@@ -4,6 +4,7 @@ import router from './router'
 import store from './store'
 import axios from 'axios'
 import apiClient from './utils/axios'
+import CryptoJS from 'crypto-js'
 
 // 引入 Vant2
 import Vant from 'vant'
@@ -14,7 +15,7 @@ Vue.config.productionTip = false
 
 const testUrl = 'http://localhost:8000';
 
-const web = 'http://42.194.183.221:89/api';
+const web = 'http://parliy.com:89/api';
 
 // const trueUrl = testUrl;
 
@@ -22,10 +23,33 @@ const trueUrl = web;
 
 export default trueUrl;
 
+const API_SECRET_KEY = 'BuYaoGaoWoHaoMa-123!@#MMD'
+const API_CLIENT_ID = 'vue-frontend-mental-diary'
+
 // 添加请求拦截器
 axios.interceptors.request.use(function (config) {
-  const csrftoken = getCookie('csrftoken'); // 获取 CSRF 令牌
-  config.headers['X-CSRFToken'] = csrftoken; // 设置 CSRF 令牌`
+  // 生成时间戳
+  const timestamp = Date.now();
+  const nonce = Math.random().toString(36).substring(2, 15); // 添加随机数
+  
+  // 生成签名
+  const requestBody = config.data ? JSON.stringify(config.data) : '';
+  const signString = `${config.method.toUpperCase()}${config.url}${timestamp}${nonce}${requestBody}`;
+  
+  const signature = CryptoJS.HmacSHA256(signString, API_SECRET_KEY).toString();
+  
+  // 添加安全头
+  config.headers['X-API-Client'] = API_CLIENT_ID;
+  config.headers['X-API-Timestamp'] = timestamp;
+  config.headers['X-API-Signature'] = signature;
+  config.headers['X-API-Nonce'] = nonce; // 添加随机数头
+  
+  // 添加 CSRF 令牌
+  const csrftoken = getCookie('csrftoken');
+  if (csrftoken) {
+    config.headers['X-CSRFToken'] = csrftoken;
+  }
+  
   return config;
 }, function (error) {
   return Promise.reject(error);
@@ -38,7 +62,6 @@ function getCookie(name) {
     const cookies = document.cookie.split(';');
     for (let i = 0; i < cookies.length; i++) {
       const cookie = cookies[i].trim();
-      // Does this cookie string begin with the name we want?
       if (cookie.substring(0, name.length + 1) === (name + '=')) {
         cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
         break;

@@ -79,9 +79,9 @@
         
         <!-- 注册提示 -->
         <div class="register-tip">
-          还没有账号? <a href="#" class="register-link">立即注册</a>
+          还没有账号? <a @click="goToRegister" class="register-link">立即注册</a>
         </div>
-        <div class="register-tip" style="font-size: smaller;">提示：初始密码是姓名首字母大写@学号，登录后可修改</div>
+        <div class="register-tip" style="font-size: smaller;">提示：初始密码是姓名首字母大写@学号，登录后请修改</div>
         <div class="register-tip" style="font-size: smaller; margin-top:0">例如小明学号是1234，密码：XM@1234</div>
       </div>
     </div>
@@ -223,6 +223,9 @@ export default {
       this.$store.commit('SET_TOKEN', data.token);
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data));
+    },
+    goToRegister(){
+      this.$router.push('/register')
     }
   }
 };
