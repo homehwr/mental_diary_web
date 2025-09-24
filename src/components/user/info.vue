@@ -219,12 +219,7 @@ export default {
       formData.append('file', file.file);
       
       // 调用后端API上传头像
-      this.$axios.post('http://parliy.com:89/api/upload/image', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-      .then(response => {
+      this.$axios.post('http://parliy.com:89/api/upload/image', formData).then(response => {
         const { url, filename } = response.data;
         
         // 更新Vuex中的用户头像

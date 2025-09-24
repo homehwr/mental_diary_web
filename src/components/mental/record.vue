@@ -694,12 +694,7 @@ export default {
       const formData = new FormData();
       formData.append('file', fileItem.file);
       
-      this.$axios.post('http://parliy.com:89/api/upload/image', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-      .then(response => {
+      this.$axios.post('http://parliy.com:89/api/upload/image', formData).then(response => {
         // 上传成功处理
         fileItem.status = 'done';
         fileItem.message = '上传成功';

@@ -32,9 +32,12 @@ axios.interceptors.request.use(function (config) {
   const timestamp = Date.now();
   const nonce = Math.random().toString(36).substring(2, 15); // 添加随机数
   
-  // 生成签名
-  const requestBody = config.data ? JSON.stringify(config.data) : '';
-  const signString = `${config.method.toUpperCase()}${config.url}${timestamp}${nonce}${requestBody}`;
+  // 只使用路径部分，不包含查询参数
+  const url = new URL(config.url, config.baseURL);
+  const path = url.pathname; // 只使用路径，忽略查询参数
+  
+  // 构建签名字符串 - 只包含方法、路径、时间戳和随机数
+  const signString = `${config.method.toUpperCase()}${path}${timestamp}${nonce}`;
   
   const signature = CryptoJS.HmacSHA256(signString, API_SECRET_KEY).toString();
   
@@ -42,13 +45,17 @@ axios.interceptors.request.use(function (config) {
   config.headers['X-API-Client'] = API_CLIENT_ID;
   config.headers['X-API-Timestamp'] = timestamp;
   config.headers['X-API-Signature'] = signature;
-  config.headers['X-API-Nonce'] = nonce; // 添加随机数头
+  config.headers['X-API-Nonce'] = nonce;
   
   // 添加 CSRF 令牌
   const csrftoken = getCookie('csrftoken');
   if (csrftoken) {
     config.headers['X-CSRFToken'] = csrftoken;
   }
+  
+  // 调试输出
+  // console.log("Frontend sign string:", signString);
+  // console.log("Frontend signature:", signature);
   
   return config;
 }, function (error) {

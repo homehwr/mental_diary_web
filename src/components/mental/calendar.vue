@@ -115,7 +115,7 @@
 </template>
 
 <script>
-import { NavBar, Icon, Button, Loading } from 'vant';
+import { NavBar, Icon, Button, Loading, Toast } from 'vant';
 import dayjs from 'dayjs';
 
 export default {
@@ -124,7 +124,8 @@ export default {
     [NavBar.name]: NavBar,
     [Icon.name]: Icon,
     [Button.name]: Button,
-    [Loading.name]: Loading
+    [Loading.name]: Loading,
+    [Toast.name]: Toast
   },
   data() {
     // 设置起始日期为2025年7月1日
@@ -142,7 +143,8 @@ export default {
       recordedDates: [],
       globalLoading: true, // 全局加载状态
       recordsLoading: false, // 记录列表加载状态
-      refreshing: false // 刷新状态
+      refreshing: false, // 刷新状态
+      calendarInitialized: false // 日历是否已初始化
     };
   },
   computed: {
@@ -166,17 +168,21 @@ export default {
       this.globalLoading = true;
       
       try {
-        // 先获取有记录的日期
+        // 先生成日历（即使没有记录数据也要生成）
+        this.generateCalendarDays();
+        this.calendarInitialized = true;
+        
+        // 然后尝试获取有记录的日期
         await this.fetchRecordedDates();
         
-        // 然后生成日历
-        this.generateCalendarDays();
+        // 更新日历中的记录标记
+        this.updateCalendarWithRecords();
         
         // 最后加载当前日期的记录
         await this.loadRecordsForDate(this.selectedDate);
       } catch (error) {
         console.error('加载数据失败:', error);
-        this.$toast('加载数据失败，请稍后重试');
+        Toast('加载数据失败，请稍后重试');
       } finally {
         this.globalLoading = false;
       }
@@ -186,11 +192,29 @@ export default {
     async fetchRecordedDates() {
       try {
         const response = await this.$axios.get(`/diary/getUserDiaryDates?uid=${this.$store.state.User.uid}`);
-        this.recordedDates = response.data;
+        if (response.data && Array.isArray(response.data)) {
+          this.recordedDates = response.data;
+        } else {
+          this.recordedDates = [];
+        }
       } catch (error) {
         console.error('获取有记录的日期错误:', error);
-        this.$toast('获取日期信息失败');
-        throw error;
+        // 即使出错也继续执行，只是没有记录标记
+        this.recordedDates = [];
+        throw error; // 继续抛出错误，让调用方知道
+      }
+    },
+    
+    // 更新日历中的记录标记
+    updateCalendarWithRecords() {
+      if (this.calendarDays.length > 0 && this.recordedDates.length > 0) {
+        this.calendarDays = this.calendarDays.map(day => {
+          const dateStr = dayjs(day.date).format('YYYY-MM-DD');
+          return {
+            ...day,
+            hasRecord: this.recordedDates.includes(dateStr)
+          };
+        });
       }
     },
     
@@ -229,12 +253,13 @@ export default {
     createDayObject(date, inCurrentMonth) {
       const dateStr = dayjs(date).format('YYYY-MM-DD');
       const today = new Date();
+      const hasRecord = this.recordedDates.includes(dateStr);
       
       return {
         date: date,
         dateStr: dateStr,
         isToday: date.toDateString() === today.toDateString(),
-        hasRecord: this.recordedDates.includes(dateStr),
+        hasRecord: hasRecord,
         inCurrentMonth: inCurrentMonth,
         isSelected: date.toDateString() === this.selectedDate.toDateString()
       };
@@ -259,6 +284,11 @@ export default {
         this.currentMonth = newMonth;
         this.currentYear = newYear;
         this.generateCalendarDays();
+        
+        // 如果有记录数据，更新日历中的记录标记
+        if (this.recordedDates.length > 0) {
+          this.updateCalendarWithRecords();
+        }
       } else {
         // 仅重新生成日历
         this.generateCalendarDays();
@@ -288,7 +318,7 @@ export default {
         }
       } catch (error) {
         console.error('获取日记错误:', error);
-        // this.$toast('获取记录失败，请稍后重试');
+        Toast('获取记录失败或当天没有记录！');
         this.records = [];
       } finally {
         this.recordsLoading = false;
@@ -340,8 +370,20 @@ export default {
     // 刷新记录
     async refreshRecords() {
       this.refreshing = true;
-      await this.loadRecordsForDate(this.selectedDate);
-      this.refreshing = false;
+      try {
+        // 重新获取记录日期
+        await this.fetchRecordedDates();
+        // 更新日历中的记录标记
+        this.updateCalendarWithRecords();
+        // 重新加载当前日期的记录
+        await this.loadRecordsForDate(this.selectedDate);
+        Toast('刷新成功');
+      } catch (error) {
+        console.error('刷新失败:', error);
+        Toast('刷新失败，请稍后重试');
+      } finally {
+        this.refreshing = false;
+      }
     },
     
     // 查看记录详情
@@ -376,6 +418,11 @@ export default {
         this.currentMonth--;
       }
       this.generateCalendarDays();
+      
+      // 如果有记录数据，更新日历中的记录标记
+      if (this.recordedDates.length > 0) {
+        this.updateCalendarWithRecords();
+      }
     },
     
     // 下个月
@@ -395,6 +442,11 @@ export default {
       }
       
       this.generateCalendarDays();
+      
+      // 如果有记录数据，更新日历中的记录标记
+      if (this.recordedDates.length > 0) {
+        this.updateCalendarWithRecords();
+      }
     }
   }
 };
