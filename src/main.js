@@ -11,15 +11,19 @@ import Vant from 'vant'
 import 'vant/lib/index.css' // 关键：引入 Vant 样式
 Vue.use(Vant)
 
+import ElementUI from 'element-ui';
+import 'element-ui/lib/theme-chalk/index.css';
+Vue.use(ElementUI);
+
 Vue.config.productionTip = false
 
 const testUrl = 'http://localhost:8000';
 
 const web = 'http://parliy.com:89/api';
 
-// const trueUrl = testUrl;
+const trueUrl = testUrl;
 
-const trueUrl = web;
+// const trueUrl = web;
 
 export default trueUrl;
 
@@ -90,5 +94,6 @@ Vue.prototype.$apiUrl = trueUrl;
 new Vue({
   router,
   store,
+  el: '#app',
   render: h => h(App)
 }).$mount('#app')

@@ -1,5 +1,5 @@
 <template>
-  <div id="app">
+  <div id="app" :class="{'mobile-layout': !isManageRoute}">
     <!-- 路由视图容器 -->
     <router-view />
   </div>
@@ -7,20 +7,26 @@
 
 <script>
 export default {
-  name: 'App'
+  name: 'App',
+  computed: {
+    isManageRoute() {
+      return this.$route.path.startsWith('/manage');
+    }
+  }
 }
 </script>
 
 <style>
-/* 全局基础样式 */
-* {
+/* 移动端全局样式 - 只对非管理路由生效 */
+.mobile-layout * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
 }
 
-html, body {
+.mobile-layout html, 
+.mobile-layout body {
   height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", STHeiti, "Microsoft Yahei", Tahoma, Simsun, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -31,7 +37,7 @@ html, body {
   line-height: 1.5;
 }
 
-#app {
+.mobile-layout #app {
   min-height: 100vh;
   max-width: 500px;
   margin: 0 auto;

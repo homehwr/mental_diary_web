@@ -53,6 +53,22 @@ const routes = [
     path: '/register',
     name: 'register',
     component: () => import(/* webpackChunkName: "user" */ '../components/user/register.vue')
+  },
+  {
+    path: '/manage',
+    name: 'manage',
+    component: () => import(/* webpackChunkName: "manage" */ '../components/manage/bar.vue'),
+    redirect: "/manage/index",
+    children: [
+      {
+          path: "index",
+          component: () => import("../components/manage/index.vue")
+      },
+      {
+          path: "diaryList",
+          component: () => import("../components/manage/diaryList.vue")
+      },
+    ]
   }
 ]
 

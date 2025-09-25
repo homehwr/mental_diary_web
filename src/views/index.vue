@@ -48,7 +48,10 @@
              
       <!-- 平台数据卡片 -->
       <div class="stats-card">
-        <h3><van-icon name="bar-chart-o" color="#3498db" /> 平台数据概览</h3>
+        <h3><van-icon name="bar-chart-o" color="#3498db" /> 平台数据概览 
+          <van-button v-if="$store.state.User.duty" size="small" type="info" 
+            @click="gotoManage" style="float: right;">进入后台管理系统</van-button></h3>
+
         <div class="stats-grid">
           <div class="stat-item">
             <div class="stat-value">{{ visitCount }}</div>
@@ -466,7 +469,6 @@ export default {
     if (!this.isLoggedIn) {
       this.loadStats();
     }
-
     // 更新时间
     this.timeInterval = setInterval(() => {
       this.currentTime = dayjs().format('HH:mm');
@@ -476,6 +478,10 @@ export default {
     // 检查登录状态
     this.checkLoginStatus();
 
+    if (!sessionStorage.getItem('visitCounted')) {
+      this.$axios.post('/stats/record-visit');
+      sessionStorage.setItem('visitCounted', 'true');
+    }
   },
   beforeDestroy() {
     if (this.timeInterval) {
@@ -686,6 +692,9 @@ export default {
       return defaultTitles[mood] || '我的心情记录';
     },
     
+    gotoManage(){
+      this.$router.push('/manage');
+    }
   }
 };
 </script>
