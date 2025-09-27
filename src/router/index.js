@@ -56,8 +56,8 @@ const routes = [
   },
   {
     path: '/chart',
-    name: 'register',
-    component: () => import(/* webpackChunkName: "user" */ '../components/user/chart.vue')   
+    name: 'chart',
+    component: () => import(/* webpackChunkName: "user" */ '../components/mental/chart.vue')   
   },
   {
     path: '/manage',
@@ -67,23 +67,23 @@ const routes = [
     children: [
       {
           path: "index",
-          component: () => import("../components/manage/index.vue")
+          component: () => import(/* webpackChunkName: "manage" */ "../components/manage/index.vue")
       },
       {
           path: "diaryList",
-          component: () => import("../components/manage/diaryList.vue")
+          component: () => import(/* webpackChunkName: "manage" */ "../components/manage/diaryList.vue")
       },
       {
           path: "concern",
-          component: () => import("../components/manage/concern.vue")
+          component: () => import(/* webpackChunkName: "manage" */ "../components/manage/concern.vue")
       },
       {
           path: "statistics",
-          component: () => import("../components/manage/statistics.vue")
+          component: () => import(/* webpackChunkName: "manage" */ "../components/manage/statistics.vue")
       },
       {
         path: "UserList",
-        component: () => import("../components/manage/UserList.vue")
+        component: () => import(/* webpackChunkName: "manage" */ "../components/manage/UserList.vue")
       }
     ]
   }
