@@ -21,9 +21,9 @@ const testUrl = 'http://localhost:8000';
 
 const web = 'http://parliy.com:89/api';
 
-const trueUrl = testUrl;
+// const trueUrl = testUrl;
 
-// const trueUrl = web;
+const trueUrl = web;
 
 export default trueUrl;
 

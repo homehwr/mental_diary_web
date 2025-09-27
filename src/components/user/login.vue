@@ -23,8 +23,8 @@
         <!-- 学号输入 -->
         <van-field
           v-model="userInfo.account"
-          label="学号"
-          placeholder="请输入学号"
+          label="账号"
+          placeholder="请输入学号或工号"
           left-icon="user-o"
           clearable
           :border="false"
@@ -60,7 +60,7 @@
           <van-checkbox v-model="rememberPassword" shape="square" icon-size="16px">
             记住密码
           </van-checkbox>
-          <a href="#" class="forgot-password">忘记密码?</a>
+          <a @click="forgetPwd" class="forgot-password">忘记密码?</a>
         </div>
         
         <!-- 登录按钮 -->
@@ -101,8 +101,8 @@
 </template>
 
 <script>
-import { Field, Button, Checkbox, Icon, Toast } from 'vant';
-
+import { Field, Button, Checkbox, Icon, Toast, Notify } from 'vant';
+// import Notify from '@vant/weapp/notify/notify';
 export default {
   components: {
     [Field.name]: Field,
@@ -207,6 +207,10 @@ export default {
       }
     },
     
+    forgetPwd(){
+      Notify({ type: 'warning', message: '忘记密码请找老师或者管理员重置！' });
+    },
+
     setStoreState(data) {
       this.$store.commit('SET_USER', {  
         uid: data.uid,  

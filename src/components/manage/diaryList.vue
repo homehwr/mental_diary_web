@@ -61,6 +61,17 @@
       
       <div class="filter-row">
         <div class="filter-group">
+          <span class="filter-label">学号：</span>
+          <el-input 
+            v-model="filterParams.account" 
+            placeholder="请输入学号" 
+            size="medium" 
+            clearable
+            style="width: 200px;"
+          ></el-input>
+        </div>
+
+        <div class="filter-group">
           <span class="filter-label">日期范围：</span>
           <el-date-picker
             v-model="filterParams.dateRange"
@@ -75,7 +86,6 @@
         </div>
         
         <div class="action-buttons">
-          <!-- <el-button type="primary" icon="el-icon-search">搜索</el-button> -->
           <el-button icon="el-icon-refresh" @click="resetFilters">重置</el-button>
           <el-button type="success" icon="el-icon-download" @click="exportData">导出数据</el-button>
         </div>
@@ -172,170 +182,27 @@
       </div>
     </el-card>
 
-    <!-- 日记详情弹窗 -->
-    <el-dialog
-      :title="`日记详情 - ${detailDiary.username || '用户'}`"
-      :visible.sync="dialogVisible"
-      width="60%"
-      class="diary-detail-dialog"
+    <!-- 日记详情弹窗组件 -->
+    <DiaryDetailDialog
+      :visible="dialogVisible"
+      :diary="detailDiary"
+      :loading="detailLoading"
       @close="handleDialogClose"
-    >
-      <div class="diary-detail-content" v-loading="detailLoading">
-        <!-- 基本信息区域 -->
-        <el-card class="info-card" shadow="never">
-          <div class="basic-info">
-            <div class="info-row">
-              <div class="info-item">
-                <span class="info-label">姓名：</span>
-                <span class="info-value">{{ detailDiary.username || '暂无' }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">关联实验：</span>
-                <span class="info-value">{{ detailDiary.experiment || '暂无' }}</span>
-              </div>
-            </div>
-            <div class="info-row">
-              <div class="info-item">
-                <span class="info-label">班级：</span>
-                <span class="info-value">{{ detailDiary.real_class || '暂无' }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">学号：</span>
-                <span class="info-value">{{ detailDiary.account || '暂无' }}</span>
-              </div>
-            </div>
-            <div class="info-row">
-              <div class="info-item">
-                <span class="info-label">提交时间：</span>
-                <span class="info-value">{{ formatDate(detailDiary.create_time) }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">心情状态：</span>
-                <span class="mood-tag detail-mood" :class="'mood-' + detailDiary.mood">
-                  {{ detailDiary.mood }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </el-card>
-
-        <!-- 情绪指标区域 -->
-        <el-card class="metrics-card" shadow="never">
-          <div class="card-header">
-            <i class="el-icon-data-analysis"></i>
-            <span>情绪指标</span>
-          </div>
-          <div class="metrics-grid">
-            <div class="metric-item">
-              <div class="metric-label">精力水平</div>
-              <div class="metric-rate">
-                <el-rate
-                  v-model="energyRate"
-                  disabled
-                  :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
-                  :max="5"
-                ></el-rate>
-                <span class="metric-value">{{ detailDiary.energy || 0 }}/10</span>
-              </div>
-            </div>
-            <div class="metric-item">
-              <div class="metric-label">积极情绪</div>
-              <div class="metric-rate">
-                <el-rate
-                  v-model="positiveRate"
-                  disabled
-                  :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
-                  :max="5"
-                ></el-rate>
-                <span class="metric-value">{{ detailDiary.positive || 0 }}/10</span>
-              </div>
-            </div>
-            <div class="metric-item">
-              <div class="metric-label">压力水平</div>
-              <div class="metric-rate">
-                <el-rate
-                  v-model="stressRate"
-                  disabled
-                  :colors="['#2ECC71', '#F39C12', '#E74C3C']"
-                  :max="5"
-                ></el-rate>
-                <span class="metric-value">{{ detailDiary.stress || 0 }}/10</span>
-              </div>
-            </div>
-          </div>
-        </el-card>
-
-        <!-- 日记内容区域 -->
-        <el-card class="content-card" shadow="never">
-          <div class="card-header">
-            <i class="el-icon-document"></i>
-            <span>日记内容</span>
-            <el-tag v-if="detailDiary.secret === 1" type="warning" size="small" class="secret-tag">
-              <i class="el-icon-lock"></i>私密
-            </el-tag>
-          </div>
-          <div class="content-area">
-            <template v-if="detailDiary.secret === 1">
-              <div class="secret-message">
-                <i class="el-icon-lock secret-icon"></i>
-                <p>用户设置了内容仅自己可见</p>
-              </div>
-            </template>
-            <template v-else>
-              <div class="diary-text" v-if="detailDiary.content">
-                {{ detailDiary.content }}
-              </div>
-              <div class="no-content" v-else>
-                <i class="el-icon-document-remove"></i>
-                <p>暂无日记内容</p>
-              </div>
-              
-              <!-- 图片展示 -->
-              <div class="images-section" v-if="detailDiary.images && detailDiary.images.trim()">
-                <div class="images-title">相关图片：</div>
-                <div class="images-grid">
-                  <div 
-                    v-for="(image, index) in getImageList(detailDiary.images)" 
-                    :key="index" 
-                    class="image-item"
-                    @click="viewImage(image)"
-                  >
-                    <el-image
-                      :src="image"
-                      :preview-src-list="getImageList(detailDiary.images)"
-                      fit="cover"
-                      class="diary-image"
-                    >
-                      <div slot="error" class="image-error">
-                        <i class="el-icon-picture-outline"></i>
-                        <span>加载失败</span>
-                      </div>
-                      <div slot="placeholder" class="image-loading">
-                        <i class="el-icon-loading"></i>
-                        <span>加载中...</span>
-                      </div>
-                    </el-image>
-                  </div>
-                </div>
-              </div>
-            </template>
-          </div>
-        </el-card>
-      </div>
-      
-      <span slot="footer" class="dialog-footer">
-        <el-button @click="dialogVisible = false">关闭</el-button>
-      </span>
-    </el-dialog>
+    />
   </div>
 </template>
 
 <script>
 // 导入导出功能所需的库
 import * as XLSX from 'xlsx';
+// 导入日记详情弹窗组件
+import DiaryDetailDialog from './diaryDetailDialog.vue';
 
 export default {
   name: 'DiaryList',
+  components: {
+    DiaryDetailDialog
+  },
   data() {
     return {
         loading: false,
@@ -348,7 +215,8 @@ export default {
             name: '',
             class: '',
             mood: '',
-            dateRange: []
+            dateRange: [],
+            account: ''
         },
         // 压力指数图标配置 - 统一使用警告图标
         iconClasses: ['el-icon-warning', 'el-icon-warning', 'el-icon-warning'],
@@ -373,21 +241,6 @@ export default {
         const start = (this.currentPage - 1) * this.pageSize;
         const end = start + this.pageSize;
         return this.getFilteredDiaries().slice(start, end);
-    },
-    
-    // 计算精力水平评分（0-10转换为0-5）
-    energyRate() {
-      return this.detailDiary.energy ? this.detailDiary.energy / 2 : 0;
-    },
-    
-    // 计算积极情绪评分
-    positiveRate() {
-      return this.detailDiary.positive ? this.detailDiary.positive / 2 : 0;
-    },
-    
-    // 计算压力水平评分
-    stressRate() {
-      return this.detailDiary.stress ? this.detailDiary.stress / 2 : 0;
     }
   },
   watch: {
@@ -408,35 +261,32 @@ export default {
     // 初始化班级选项（按年级排序）
     initClassOptions() {
       const classList = [
-        '物理学2202', '物理学2502', '电子信息工程2402', '物理学(公费师范)2201', 
-        '物理学2302', '电气工程及其自动化2501', '电子信息工程2302', 
-        '电气工程及其自动化2502', '电子信息工程2202', '区块链工程2301', 
-        '物理学2201', '物理学(公费师范)2401', '物理学2501', '电子科学与技术2401', 
-        '电子信息工程2502', '物理学(公费师范)2202', '电子科学与技术2501', 
-        '物理学2401', '电子科学与技术2502', '电子科学与技术2201',  
-        '电子信息工程2201', '电子信息工程2401', '物理学(公费师范)2301', 
-        '物理学2301', '物理学(公费师范)2501', '物理学(非师范)2501', 
-        '电子科学与技术2301', '电子信息工程2501', '电子信息工程2301', 
-        '电子科学与技术2402', '区块链工程2401'
+        '物理学2501', '物理学2502', '电气工程及其自动化2501', '电气工程及其自动化2502', 
+        '电子信息工程2501', '电子信息工程2502', '电子科学与技术2501', '电子科学与技术2502', 
+        '物理学(公费师范)2501', '物理学(非师范)2501', '电子信息工程2401', '电子信息工程2402', 
+        '物理学(公费师范)2401', '电子科学与技术2401', '电子科学与技术2402', '物理学2401', 
+        '区块链工程2401', '物理学2301', '物理学2302', '电子信息工程2301', '电子信息工程2302', 
+        '区块链工程2301', '物理学(公费师范)2301', '电子科学与技术2301', '物理学2201', '物理学2202', 
+        '物理学(公费师范)2201', '物理学(公费师范)2202', '电子信息工程2202', '电子信息工程2201', '电子科学与技术2201'
       ];
       
       // 按年级排序：25级 -> 24级 -> 23级 -> 22级
-      const sortedClasses = classList.sort((a, b) => {
-        // 提取年级数字（字符串中的前两位数字）
-        const getGrade = (str) => {
-          const match = str.match(/\d{2}/);
-          return match ? parseInt(match[0]) : 0;
-        };
+      // const sortedClasses = classList.sort((a, b) => {
+      //   // 提取年级数字（字符串中的前两位数字）
+      //   const getGrade = (str) => {
+      //     const match = str.match(/\d{2}/);
+      //     return match ? parseInt(match[0]) : 0;
+      //   };
         
-        const gradeA = getGrade(a);
-        const gradeB = getGrade(b);
+      //   const gradeA = getGrade(a);
+      //   const gradeB = getGrade(b);
         
-        // 按年级降序排列
-        return gradeB - gradeA;
-      });
-      
+      //   // 按年级降序排列
+      //   return gradeB - gradeA;
+      // });
+      // console.log(sortedClasses);
       // 生成选项
-      this.classOptions = sortedClasses.map(cls => ({
+      this.classOptions = classList.map(cls => ({
         value: cls,
         label: cls
       }));
@@ -450,7 +300,16 @@ export default {
         this.$axios.get("/diary/getAllDiaries")
             .then(res => {
                 this.allDiaries = res.data.diaries || [];
-                this.totalItems = this.allDiaries.length;
+                // 数据加载完成后，如果有account参数，则进行筛选
+                if (this.$route.query.account) {
+                    this.filterParams.account = this.$route.query.account;
+                    // 等待下一个DOM更新周期，确保数据已更新
+                    this.$nextTick(() => {
+                        this.totalItems = this.getFilteredDiaries().length;
+                    });
+                } else {
+                    this.totalItems = this.allDiaries.length;
+                }
                 this.loading = false;
             })
             .catch(error => {
@@ -458,7 +317,15 @@ export default {
                 this.loading = false;
                 
                 // 如果请求失败，使用模拟数据
-                this.$message.error("数据加载失败！")
+                this.$message.error("数据加载失败！");
+                if (this.$route.query.account) {
+                    this.filterParams.account = this.$route.query.account;
+                    this.$nextTick(() => {
+                        this.totalItems = this.getFilteredDiaries().length;
+                    });
+                } else {
+                    this.totalItems = this.allDiaries.length;
+                }
             });
     },
     
@@ -488,6 +355,12 @@ export default {
         if (this.filterParams.mood) {
         filtered = filtered.filter(diary => 
             diary.mood && diary.mood.toString() === this.filterParams.mood
+        );
+        }
+        // 学号筛选
+        if (this.filterParams.account) {
+        filtered = filtered.filter(diary => 
+            diary.account && diary.account === this.filterParams.account
         );
         }
         
@@ -574,48 +447,12 @@ export default {
       return moodNames[moodId] || '未知';
     },
     
-    // 格式化日期
-    formatDate(dateString) {
-      if (!dateString) return '暂无';
-      const date = new Date(dateString);
-      return date.toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    },
-    
-    // 处理图片字符串，转换为数组
-    getImageList(images) {
-      if (!images) return [];
-      return images.split(',').filter(img => img.trim());
-    },
-    
-    // 查看大图
-    viewImage(image) {
-      // 这里使用element-ui的image预览功能，不需要额外处理
-    },
-    
-    // 重置筛选条件
-    resetFilters() {
-      this.filterParams = {
-        name: '',
-        class: '',
-        mood: '',
-        dateRange: []
-      };
-      this.currentSort = { prop: '', order: '' };
-      this.currentPage = 1;
-    },
-    
     // 查看日记详情
     viewDiary(diary) {
       this.detailLoading = true;
       this.dialogVisible = true;
       
-      this.$axios.get(`/diary/getById?id=${diary.id}`).then(res => {
+      this.$axios.get(`/diary/getById?id=${diary.id}&recommend=false`).then(res => {
         this.detailDiary = res.data[0] || {};
         this.detailDiary.username = diary.username;
         this.detailDiary.real_class = diary.real_class;
@@ -630,6 +467,7 @@ export default {
     
     // 关闭弹窗时的处理
     handleDialogClose() {
+      this.dialogVisible = false;
       this.detailDiary = {};
     },
     
@@ -647,6 +485,18 @@ export default {
     // 页码变化
     handlePageChange(page) {
       this.currentPage = page;
+    },
+    
+    // 重置筛选条件
+    resetFilters() {
+      this.filterParams = {
+        name: '',
+        class: '',
+        mood: '',
+        dateRange: []
+      };
+      this.currentSort = { prop: '', order: '' };
+      this.currentPage = 1;
     },
     
     // 导出数据为Excel

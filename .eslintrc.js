@@ -19,6 +19,7 @@ module.exports = {
     'vue/max-attributes-per-line': 'off',             // 不限制每行属性数量
     'vue/html-indent': 'off',                         // 关闭HTML缩进检查
     'vue/require-default-prop': 'off',                // 不要求prop默认值
+    'vue/no-mutating-props': 'off',
     
     // JavaScript相关
     'no-unused-vars': 'warn',                         // 未使用变量改为警告

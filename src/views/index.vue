@@ -1,10 +1,17 @@
 <template>
   <div class="home-page">
+    <!-- 广播条 -->
+    <div class="broadcast-bar" v-if="showBroadcast && !broadcastClosed">
+      <div class="broadcast-content" :class="{ 'broadcast-paused': isPaused }">
+        <span class="broadcast-text" ref="broadcastText">{{ currentBroadcast }}</span>
+      </div>
+      <button class="broadcast-close" @click="closeBroadcast">×</button>
+    </div>
     <!-- 顶部学院信息栏 -->
     <div class="university-header">
       <div class="header-background">
         <div class="logo-container">
-          <img src="@/assets/wdxy.jpg" alt="物电学院Logo" class="university-logo">
+          <img src="@/assets/wdxy.png" alt="物电学院Logo" class="university-logo">
         </div>
         <div class="header-content">
           <div class="app-info">
@@ -48,9 +55,10 @@
              
       <!-- 平台数据卡片 -->
       <div class="stats-card">
-        <h3><van-icon name="bar-chart-o" color="#3498db" /> 平台数据概览 
+        <h3 v-if="isLoggedIn"><van-icon name="bar-chart-o" color="#3498db" /> 平台数据概览 
           <van-button v-if="$store.state.User.duty" size="small" type="info" 
             @click="gotoManage" style="float: right;">进入后台管理系统</van-button></h3>
+        <h3 v-else><van-icon name="bar-chart-o" color="#3498db" /> 平台数据概览 </h3>
 
         <div class="stats-grid">
           <div class="stat-item">
@@ -317,7 +325,7 @@
 
       <!-- 制作人信息 -->
       <div class="creator-info">
-        <p>格致心灵日记 v1.0.4</p>
+        <p>格致心灵日记 v1.1.2</p>
         <p>© 2025 赣南师范大学物理与电子信息学院</p>
         <p>设计开发: 物公2201黄文瑞</p>
       </div>
@@ -445,7 +453,33 @@ export default {
       // 新增：平台统计数据
       visitCount: null,
       userCount: null,
-      diaryCount: null
+      diaryCount: null,
+      // 新增广播相关数据
+      showBroadcast: true,
+      broadcastClosed: false,
+      isPaused: false,
+      broadcastSpeed: 1, // 滚动速度，数值越小越快
+      broadcastOffset: 0,
+      animationId: null,
+      
+      // 广播消息配置
+      broadcastMessages: {
+        preLogin: [
+          // "欢迎使用格致心灵日记！记录心情，关注心理健康，从今天开始。",
+          // "新用户注册即可获得专属心理成长分析报告！",
+          // "每日记录心情，可获得个性化心理建议和成长指导。",
+          // "平台已服务超过1000名师生，共同关注心理健康成长。"
+        ],
+        postLogin: [
+          `欢迎回来，${this.$store.state.User?.username || ''}！今日心情记录了吗？`,
+          // "坚持记录心情，有助于更好地了解自己的情绪变化规律。",
+          // // "您已连续记录5天，继续坚持可获得完整情绪分析报告！",
+          // "温馨提示：定期回顾日记，有助于心理成长和情绪管理。",
+          // "探索智能小沐功能，获得AI心理辅导和建议。"
+        ]
+      },
+      currentBroadcastIndex: 0,
+      broadcastTimer: null
     };
   },
   computed: {
@@ -463,6 +497,12 @@ export default {
     },
     moodIconBg() {
       return this.todayMood.color + '20'; // 添加透明度
+    },
+    currentBroadcast() {
+      const messages = this.isLoggedIn ? 
+        this.broadcastMessages.postLogin : 
+        this.broadcastMessages.preLogin;
+      return messages[this.currentBroadcastIndex];
     }
   },
   mounted() {
@@ -482,18 +522,32 @@ export default {
       this.$axios.post('/stats/record-visit');
       sessionStorage.setItem('visitCounted', 'true');
     }
+    this.initBroadcast();
   },
   beforeDestroy() {
     if (this.timeInterval) {
       clearInterval(this.timeInterval);
     }
   },
+  watch: {
+    // 监听登录状态变化，切换广播消息
+    isLoggedIn() {
+      this.currentBroadcastIndex = 0;
+      this.restartBroadcast();
+    }
+  },
   methods: {
     checkLoginStatus() {
-      if (this.$store.state.User.uid) {
+      if (this.$store.state.User) {
+        this.$axios.get('/broadcast/getPreMsg?kind=2').then(res => {
+          this.broadcastMessages.postLogin = this.broadcastMessages.postLogin.concat(res.data);
+        })
         this.isLoggedIn = true;
         this.loadData();
       } else {
+        this.$axios.get('/broadcast/getPreMsg?kind=1').then(res => {
+          this.broadcastMessages.preLogin = res.data;
+        })
         this.isLoggedIn = false;
         // 未登录时只加载统计数据
         this.loadStats();
@@ -504,7 +558,7 @@ export default {
       // 尝试从本地缓存获取统计数据
       const cachedStats = localStorage.getItem('stats_cache');
       if (cachedStats) {
-        console.log('缓存', cachedStats);
+        // console.log('缓存', cachedStats);
         const { data, timestamp } = JSON.parse(cachedStats);
         // 如果缓存未过期（5分钟内），使用缓存数据
         if (Date.now() - timestamp < 5 * 60 * 1000) {
@@ -517,7 +571,7 @@ export default {
       
       // 没有缓存或缓存过期，请求数据
       this.$axios.get('/stats/stats').then(res => {
-        console.log(res)
+        // console.log(res)
         if (res.data) {
           this.visitCount = res.data.visit_count;
           this.userCount = res.data.user_count;
@@ -659,12 +713,12 @@ export default {
     },
     
     viewReport() {
-      Toast.fail("功能未开放");
-      // this.$router.push('/report');
+      Toast.fail("施工中...");
+      this.$router.push('/chart');
     },
     
     viewXM() {
-      window.location.href = "weixin://dl/business/?appid=wxd5201eb08d2fa15c&path=pages/agentChat/index&query=showAuthDirectly%3D1%26id%3DhiNeHDvorMaX"
+      window.location.href = "weixin://dl/business/?appid=wxd5201eb08d2fa15c&path=pages/agentChat/index&query=showAuthDirectly%3D1%26id%3D3TPRnXPzrDwA"
     },
     
     viewCalendar() {
@@ -681,7 +735,7 @@ export default {
 
     // 获取默认标题
     getDefaultTitle(mood) {
-      console.log(mood);
+      // console.log(mood);
       const defaultTitles = {
         '高兴': '愉快的一天',
         '平静': '平静的时光',
@@ -694,6 +748,104 @@ export default {
     
     gotoManage(){
       this.$router.push('/manage');
+    },
+    // 新增广播相关方法
+    initBroadcast() {
+      // 检查用户是否之前关闭过广播
+      // const savedState = localStorage.getItem('broadcastClosed');
+      // if (savedState) {
+      //   this.broadcastClosed = JSON.parse(savedState);
+      // }
+      
+      if (!this.broadcastClosed) {
+        this.startBroadcastAnimation();
+        this.startBroadcastTimer();
+      }
+    },
+    
+    startBroadcastAnimation() {
+      const animate = () => {
+        if (!this.isPaused && this.$refs.broadcastText) {
+          const textWidth = this.$refs.broadcastText.scrollWidth;
+          const containerWidth = this.$refs.broadcastText.parentElement.offsetWidth;
+          
+          if (textWidth > containerWidth) {
+            // 文本长度超过容器，需要滚动
+            this.broadcastOffset -= this.broadcastSpeed;
+            
+            // 如果文本完全滚出视线，重置位置
+            if (this.broadcastOffset < -textWidth) {
+              this.broadcastOffset = containerWidth;
+            }
+            
+            this.$refs.broadcastText.style.transform = `translateX(${this.broadcastOffset}px)`;
+          } else {
+            // 文本长度不超过容器，居中显示
+            this.broadcastOffset = 0;
+            this.$refs.broadcastText.style.transform = 'translateX(0)';
+          }
+        }
+        
+        this.animationId = requestAnimationFrame(animate);
+      };
+      
+      this.animationId = requestAnimationFrame(animate);
+    },
+    
+    startBroadcastTimer() {
+      // 每10秒切换一次广播消息
+      this.broadcastTimer = setInterval(() => {
+        const messages = this.isLoggedIn ? 
+          this.broadcastMessages.postLogin : 
+          this.broadcastMessages.preLogin;
+        
+        this.currentBroadcastIndex = (this.currentBroadcastIndex + 1) % messages.length;
+        
+        // 切换消息时重置滚动位置
+        this.broadcastOffset = 0;
+        if (this.$refs.broadcastText) {
+          this.$refs.broadcastText.style.transform = 'translateX(0)';
+        }
+      }, 12000);
+    },
+    
+    closeBroadcast() {
+      this.broadcastClosed = true;
+      this.showBroadcast = false;
+      this.cleanupBroadcast();
+      
+      // 保存用户选择
+      // localStorage.setItem('broadcastClosed', 'true');
+    },
+    
+    restartBroadcast() {
+      this.cleanupBroadcast();
+      this.broadcastOffset = 0;
+      if (this.$refs.broadcastText) {
+        this.$refs.broadcastText.style.transform = 'translateX(0)';
+      }
+      this.startBroadcastAnimation();
+      this.startBroadcastTimer();
+    },
+    
+    cleanupBroadcast() {
+      if (this.animationId) {
+        cancelAnimationFrame(this.animationId);
+        this.animationId = null;
+      }
+      if (this.broadcastTimer) {
+        clearInterval(this.broadcastTimer);
+        this.broadcastTimer = null;
+      }
+    },
+    
+    // 鼠标悬停暂停动画
+    onBroadcastMouseEnter() {
+      this.isPaused = true;
+    },
+    
+    onBroadcastMouseLeave() {
+      this.isPaused = false;
     }
   }
 };
@@ -1464,6 +1616,98 @@ export default {
   
   .current-time .date {
     font-size: 10px;
+  }
+}
+
+/* 广播条样式 */
+.broadcast-bar {
+  position: relative;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+  color: white;
+  padding: 10px 40px 10px 15px;
+  overflow: hidden;
+  height: 40px;
+  line-height: 20px;
+  border-bottom: 1px solid #ff9f43;
+  box-shadow: 0 2px 10px rgba(255, 107, 107, 0.3);
+  z-index: 1001;
+}
+
+.broadcast-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.broadcast-text {
+  display: inline-block;
+  white-space: nowrap;
+  transition: transform 0.1s linear;
+  font-size: 14px;
+  font-weight: 500;
+  padding-left: 100%;
+  animation-delay: 2s;
+}
+
+.broadcast-content.broadcast-paused .broadcast-text {
+  animation-play-state: paused;
+}
+
+.broadcast-close {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.broadcast-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-50%) scale(1.1);
+}
+
+/* 响应式调整 */
+@media (max-width: 480px) {
+  .broadcast-bar {
+    padding: 8px 35px 8px 10px;
+    height: 36px;
+    line-height: 18px;
+  }
+  
+  .broadcast-text {
+    font-size: 13px;
+  }
+  
+  .broadcast-close {
+    width: 20px;
+    height: 20px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  .broadcast-bar {
+    padding: 6px 30px 6px 8px;
+    height: 32px;
+    line-height: 16px;
+  }
+  
+  .broadcast-text {
+    font-size: 12px;
   }
 }
 </style>
