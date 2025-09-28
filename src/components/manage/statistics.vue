@@ -632,7 +632,7 @@ export default {
               {
                 name: '积极情感',
                 type: 'line',
-                stack: '总量',
+                // stack: '总量',
                 smooth: true,
                 lineStyle: {
                   width: 3,
@@ -654,7 +654,7 @@ export default {
               {
                 name: '消极情感',
                 type: 'line',
-                stack: '总量',
+                // stack: '总量',
                 smooth: true,
                 lineStyle: {
                   width: 3,

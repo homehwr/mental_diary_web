@@ -216,7 +216,7 @@
               <div class="action-icon report">
                 <van-icon name="chart-trending-o" size="24px" />
               </div>
-              <span class="action-text">报告</span>
+              <span class="action-text">心灵报告</span>
             </van-grid-item>
             <van-grid-item @click="viewXM">
               <div class="action-icon calendar">
@@ -325,7 +325,7 @@
 
       <!-- 制作人信息 -->
       <div class="creator-info">
-        <p>格致心灵日记 v1.1.2</p>
+        <p>格致心灵日记 v1.2.0</p>
         <p>© 2025 赣南师范大学物理与电子信息学院</p>
         <p>设计开发: 物公2201黄文瑞</p>
       </div>
@@ -713,7 +713,7 @@ export default {
     },
     
     viewReport() {
-      Toast.fail("施工中...");
+      // Toast.fail("施工中...");
       this.$router.push('/chart');
     },
     
