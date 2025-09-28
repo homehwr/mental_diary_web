@@ -290,7 +290,7 @@
             <h3 style="margin-top: 5px;"> &nbsp; 欢迎使用格致心灵日记</h3>
           </div>
           <div class="guide-content" style="margin-top: 10px;">
-            <p>记录每日心情，追踪心理成长</p>
+            <p>记录每日心情，追踪心灵成长</p>
             <p>分析情绪变化，获得专业建议</p>
             <p>与物理实验结合，探索心灵奥秘</p>
           </div>
@@ -305,7 +305,7 @@
             </div>
             <div class="feature-item">
               <van-icon name="flower-o" color="#9b59b6" />
-              <span>心理成长报告</span>
+              <span>心灵成长报告</span>
             </div>
           </div>
         </div>
@@ -315,7 +315,7 @@
           <ul class="benefits-list" style="margin-top: 10px;">
             <li>记录每日心情和实验感悟</li>
             <li>查看情绪变化趋势图表</li>
-            <li>生成个性化心理成长报告</li>
+            <li>生成个性化心灵成长报告</li>
             <li>保存和回顾历史记录</li>
             <li>获得专业心理建议</li>
           </ul>
@@ -325,7 +325,7 @@
 
       <!-- 制作人信息 -->
       <div class="creator-info">
-        <p>格致心灵日记 v1.2.0</p>
+        <p>格致心灵日记 v1.2.1</p>
         <p>© 2025 赣南师范大学物理与电子信息学院</p>
         <p>设计开发: 物公2201黄文瑞</p>
       </div>
@@ -1395,7 +1395,7 @@ export default {
   color: #95a5a6;
   font-size: 12px;
   padding: 20px 0;
-  line-height: 1.8;
+  /* line-height: 1.8; */
 }
 
 /* 底部按钮容器 */

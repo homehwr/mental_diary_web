@@ -2,7 +2,7 @@
   <div class="report-page">
     <!-- 顶部导航栏 -->
     <van-nav-bar
-      title="心理成长报告"
+      title="心灵成长报告"
       left-text="返回"
       left-arrow
       @click-left="$router.go(-1)"
@@ -173,7 +173,7 @@
       </div>
     </div>
     
-    <div class="creator-info">
+    <div class="creator-info-chart">
       <p>© 2025 赣南师范大学物理与电子信息学院 | 格致心灵日记</p>
       <p>设计开发: 物公2201黄文瑞</p>
     </div>
@@ -199,7 +199,7 @@
       :close-on-click-overlay="false"
     >
       <div class="share-popup">
-        <h3>分享心理成长报告</h3>
+        <h3>分享心灵成长报告</h3>
         <div class="share-options">
           <div class="share-option" @click="generateShareImage">
             <van-icon name="photo" size="24" color="#3498db" />
@@ -245,7 +245,7 @@
       <div class="image-preview">
         <h3>分享图片预览</h3>
         <div class="preview-container">
-          <img :src="shareImageUrl" alt="心理成长报告" class="share-image" />
+          <img :src="shareImageUrl" alt="心灵成长报告" class="share-image" />
         </div>
         <div class="preview-actions">
           <van-button 
@@ -266,7 +266,7 @@
         <div class="share-template">
           <!-- 使用纯色背景避免渐变问题 -->
           <div class="share-header">
-            <div class="share-title">心理成长报告</div>
+            <div class="share-title">心灵成长报告</div>
             <div class="share-subtitle">遇见更好的自己</div>
           </div>
           
@@ -527,7 +527,7 @@ export default {
       if (!window.wx) return;
       
       const shareData = {
-        title: `${this.safeUsername}的心理成长报告`,
+        title: `${this.safeUsername}的心灵成长报告`,
         desc: `记录了${this.reportData.total_records}天的心情变化，平均压力${this.reportData.avg_stress}/10，平均精力${this.reportData.avg_energy}/10`,
         link: window.location.href,
         imgUrl: this.safeAvatar
@@ -538,7 +538,7 @@ export default {
       // 朋友圈分享
       window.wx.updateTimelineShareData({
         ...shareData,
-        title: `${this.safeUsername}的心理成长报告 - 心灵日记`
+        title: `${this.safeUsername}的心灵成长报告 - 心灵日记`
       });
     },
     
@@ -566,6 +566,7 @@ export default {
         });
         
         this.reportData = response.data;
+        // console.log(this.reportData);
         
         // 延迟初始化图表，确保DOM已渲染
         this.$nextTick(() => {
@@ -935,7 +936,7 @@ export default {
     shareToWeibo() {
       this.showSharePopup = false;
       
-      const shareUrl = `http://service.weibo.com/share/share.php?title=${encodeURIComponent(`${this.safeUsername}的心理成长报告`)}&url=${encodeURIComponent(window.location.href)}`;
+      const shareUrl = `http://service.weibo.com/share/share.php?title=${encodeURIComponent(`${this.safeUsername}的心灵成长报告`)}&url=${encodeURIComponent(window.location.href)}`;
       window.open(shareUrl, '_blank');
     },
 
@@ -1101,7 +1102,7 @@ export default {
         <div style="text-align: center; padding: 30px 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-family: Arial, sans-serif; min-height: 667px; display: flex; flex-direction: column; justify-content: space-between;">
           <!-- 顶部标题 -->
           <div>
-            <h1 style="font-size: 25px; margin-bottom: 10px; font-weight: bold;">格致心灵日记·心理成长报告</h1>
+            <h1 style="font-size: 25px; margin-bottom: 10px; font-weight: bold;">格致心灵日记·心灵成长报告</h1>
             <p style="font-size: 16px; opacity: 0.9;">遇见更好的自己</p>
           </div>
           
@@ -1169,7 +1170,7 @@ export default {
         // 创建下载链接
         const link = document.createElement('a');
         const timestamp = new Date().getTime();
-        link.download = `心理成长报告_${timestamp}.png`;
+        link.download = `心灵成长报告_${timestamp}.png`;
         link.href = this.shareImageUrl;
         
         document.body.appendChild(link);
@@ -1830,7 +1831,7 @@ export default {
 }
 
 /* 响应式调整 */
-@media (max-width: 480px) {
+@media (max-width: 360px) {
   .distribution-grid {
     grid-template-columns: 1fr;
   }
@@ -1859,11 +1860,10 @@ export default {
     margin-bottom: 0;
   }
 }
-.creator-info {
+.creator-info-chart {
   text-align: center;
   color: #95a5a6;
   font-size: 12px;
-  padding: 20px 0;
-  line-height: 1.8;
+  padding: 10px 0;
 }
 </style>
