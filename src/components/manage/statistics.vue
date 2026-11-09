@@ -22,7 +22,31 @@
     </div>
     
     <div v-else>
-      <h2 class="analytics-title">日记数据分析</h2>
+      <div class="analytics-toolbar">
+        <h2 class="analytics-title">日记数据分析</h2>
+        <div class="toolbar-actions">
+          <el-select v-model="exportDays" size="small" style="width: 115px;" @change="loadNewAnalytics">
+            <el-option label="近 7 天" :value="7"></el-option>
+            <el-option label="近 30 天" :value="30"></el-option>
+            <el-option label="近 90 天" :value="90"></el-option>
+          </el-select>
+          <el-button
+            type="primary"
+            size="small"
+            icon="el-icon-download"
+            :loading="exportingExcel"
+            :disabled="!hasPermission"
+            @click="exportAnalysisResult('excel')"
+          >导出分析结果</el-button>
+          <el-button
+            size="small"
+            icon="el-icon-folder"
+            :loading="exportingCsv"
+            :disabled="!hasPermission"
+            @click="exportAnalysisResult('csv')"
+          >CSV</el-button>
+        </div>
+      </div>
       
       <!-- 关键指标卡片 -->
       <div class="metric-cards">
@@ -160,6 +184,63 @@
           </div>
         </el-card>
       </div>
+
+      <!-- 新增分析维度：与导出结果使用同一份数据、同一套隐私口径 -->
+      <el-card class="new-analytics-card" shadow="hover" v-loading="overviewLoading">
+        <div slot="header" class="new-card-header">
+          <span>新增分析维度</span>
+          <el-tag size="small" type="warning">仅基于公开日记，与导出口径一致</el-tag>
+        </div>
+        <el-row :gutter="20">
+          <el-col :xs="24" :md="12">
+            <div class="section-title">分析概览</div>
+            <el-table :data="newAnalytics.overview" size="small" border max-height="300">
+              <el-table-column prop="item" label="指标" width="170"></el-table-column>
+              <el-table-column prop="value" label="数值" width="110"></el-table-column>
+              <el-table-column prop="description" label="口径说明"></el-table-column>
+            </el-table>
+
+            <div class="section-title">每周情绪节奏</div>
+            <el-table :data="newAnalytics.weekly_rhythm" size="small" border max-height="260">
+              <el-table-column prop="weekday" label="星期" width="70"></el-table-column>
+              <el-table-column prop="samples" label="样本数" width="80"></el-table-column>
+              <el-table-column prop="avg_stress" label="平均压力"></el-table-column>
+              <el-table-column prop="avg_energy" label="平均精力"></el-table-column>
+              <el-table-column prop="avg_positive" label="平均积极情绪"></el-table-column>
+            </el-table>
+          </el-col>
+
+          <el-col :xs="24" :md="12">
+            <div class="section-title">记录习惯</div>
+            <el-table :data="newAnalytics.record_habits" size="small" border max-height="230">
+              <el-table-column prop="item" label="指标" width="150"></el-table-column>
+              <el-table-column prop="value" label="数值" width="90"></el-table-column>
+              <el-table-column prop="description" label="口径说明"></el-table-column>
+            </el-table>
+
+            <div class="section-title">班级情绪对比（样本数 ≥ 3）</div>
+            <el-table :data="newAnalytics.class_compare" size="small" border max-height="230">
+              <el-table-column prop="class_name" label="班级" min-width="140"></el-table-column>
+              <el-table-column prop="samples" label="样本" width="70"></el-table-column>
+              <el-table-column prop="avg_stress" label="压力" width="70"></el-table-column>
+              <el-table-column prop="negative_rate" label="消极(%)" width="90"></el-table-column>
+              <el-table-column prop="concern_rate" label="需关注(%)" width="100"></el-table-column>
+            </el-table>
+
+            <div class="section-title">高频关键词（覆盖 ≥ 2 篇公开日记）</div>
+            <div class="keyword-tags">
+              <el-tag v-for="item in newAnalytics.keywords" :key="item.word" size="small" type="info">
+                {{ item.word }} × {{ item.documents }}
+              </el-tag>
+              <span v-if="!newAnalytics.keywords.length" class="empty-tip">暂无达到隐私阈值的关键词</span>
+            </div>
+          </el-col>
+        </el-row>
+        <div class="new-privacy-note">
+          <i class="el-icon-lock"></i>
+          {{ newAnalytics.privacy_note || '新增分析仅基于公开日记计算，私密日记不参与分析、不输出任何明细。' }}
+        </div>
+      </el-card>
     </div>
     <div class="analytics-footer">
         <p style="margin-bottom: 5px;">© 2025 赣南师范大学物理与电子信息学院 | 格致心灵日记后台管理系统数据分析</p>
@@ -171,6 +252,7 @@
 <script>
 import * as echarts from 'echarts';
 import 'echarts-wordcloud';
+import { exportExcel, exportCsvZip, fetchAnalysisOverview, handleExportError } from '@/utils/export';
 
 // 数据缓存
 const dataCache = {
@@ -209,11 +291,30 @@ export default {
       trendChart: null,
       classChart: null,
       relationChart: null,
-      chartsInitialized: false
+      chartsInitialized: false,
+      // 新增分析维度与导出
+      exportDays: 30,
+      exportingExcel: false,
+      exportingCsv: false,
+      overviewLoading: false,
+      newAnalytics: {
+        overview: [],
+        weekly_rhythm: [],
+        class_compare: [],
+        record_habits: [],
+        keywords: [],
+        privacy_note: ''
+      }
     };
+  },
+  computed: {
+    hasPermission() {
+      return Number((this.$store.state.User || {}).duty || 0) >= 1;
+    }
   },
   mounted() {
     this.loadAllData();
+    this.loadNewAnalytics();
     window.addEventListener('resize', this.handleResize);
   },
   beforeDestroy() {
@@ -238,6 +339,40 @@ export default {
     }
   },
   methods: {
+    // 加载新增分析维度（与导出结果共用同一份服务端数据）
+    async loadNewAnalytics() {
+      this.overviewLoading = true;
+      try {
+        this.newAnalytics = await fetchAnalysisOverview(this.$axios, this.exportDays);
+      } catch (error) {
+        console.error('新增分析数据加载失败:', error);
+        handleExportError(this, error);
+      } finally {
+        this.overviewLoading = false;
+      }
+    },
+
+    // 导出数据分析结果
+    exportAnalysisResult(format) {
+      if (!this.hasPermission) {
+        this.$message.error('当前账号无数据导出权限');
+        return;
+      }
+      const flag = format === 'csv' ? 'exportingCsv' : 'exportingExcel';
+      this[flag] = true;
+      const params = { days: this.exportDays };
+      const task = format === 'csv'
+        ? exportCsvZip(this.$axios, 'analysis', params)
+        : exportExcel(this.$axios, 'analysis', params);
+      task.then(() => {
+        this.$message.success('数据分析结果导出成功');
+      }).catch(error => {
+        handleExportError(this, error);
+      }).finally(() => {
+        this[flag] = false;
+      });
+    },
+
     // 检查缓存是否有效
     isCacheValid() {
       return dataCache.cacheTime && (Date.now() - dataCache.cacheTime) < dataCache.CACHE_DURATION;
@@ -1109,6 +1244,83 @@ export default {
   border-radius: 8px;
   margin-top: 20px;
   backdrop-filter: blur(10px);
+}
+
+/* 数据导出工具条 */
+.analytics-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.analytics-toolbar .analytics-title {
+  margin: 0;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 新增分析维度 */
+.new-analytics-card {
+  margin-top: 20px;
+}
+
+.new-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #606266;
+  margin: 4px 0 10px;
+}
+
+.keyword-tags .el-tag {
+  margin: 0 8px 8px 0;
+}
+
+.empty-tip {
+  color: #909399;
+  font-size: 13px;
+}
+
+.new-privacy-note {
+  margin-top: 16px;
+  padding: 10px 12px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #909399;
+  line-height: 1.6;
+}
+
+.new-privacy-note i {
+  color: #E6A23C;
+  margin-right: 6px;
+}
+
+@media (max-width: 768px) {
+  .analytics-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .section-title {
+    margin-top: 18px;
+  }
 }
 
 </style>

@@ -325,7 +325,7 @@
 
       <!-- 制作人信息 -->
       <div class="creator-info">
-        <p>格致心灵日记 v1.2.1</p>
+        <p>格致心灵日记 v1.2.2</p>
         <p>© 2025 赣南师范大学物理与电子信息学院</p>
         <p>设计开发: 物公2201黄文瑞</p>
       </div>
@@ -538,7 +538,7 @@ export default {
   },
   methods: {
     checkLoginStatus() {
-      if (this.$store.state.User) {
+      if (this.$store.state.User && localStorage.getItem('token')) {
         this.$axios.get('/broadcast/getPreMsg?kind=2').then(res => {
           this.broadcastMessages.postLogin = this.broadcastMessages.postLogin.concat(res.data);
         })

@@ -85,6 +85,11 @@
             <el-menu-item index="/manage/statistics">日记数据分析</el-menu-item>
           </el-submenu>
           
+          <el-menu-item index="/manage/dataExport">
+            <i class="el-icon-download"></i>
+            <span slot="title">数据导出</span>
+          </el-menu-item>
+
           <el-menu-item index="">
             <i class="el-icon-setting"></i>
             <span slot="title">系统设置</span>

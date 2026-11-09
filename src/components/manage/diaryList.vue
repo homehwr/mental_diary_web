@@ -87,7 +87,17 @@
         
         <div class="action-buttons">
           <el-button icon="el-icon-refresh" @click="resetFilters">重置</el-button>
-          <el-button type="success" icon="el-icon-download" @click="exportData">导出数据</el-button>
+          <el-tooltip content="导出范围与当前筛选条件一致；私密日记只保留占位行，不含正文与任何详情" placement="top">
+            <el-dropdown trigger="click" @command="handleExportCommand" style="margin-left: 10px;">
+              <el-button type="success" icon="el-icon-download" :loading="exporting">
+                导出数据<i class="el-icon-arrow-down el-icon--right"></i>
+              </el-button>
+              <el-dropdown-menu slot="dropdown">
+                <el-dropdown-item command="excel">导出 Excel（推荐）</el-dropdown-item>
+                <el-dropdown-item command="csv">导出 CSV 压缩包</el-dropdown-item>
+              </el-dropdown-menu>
+            </el-dropdown>
+          </el-tooltip>
         </div>
       </div>
     </el-card>
@@ -193,8 +203,8 @@
 </template>
 
 <script>
-// 导入导出功能所需的库
-import * as XLSX from 'xlsx';
+// 数据导出（服务端完成权限校验与隐私脱敏）
+import { exportExcel, exportCsvZip, handleExportError } from '@/utils/export';
 // 导入日记详情弹窗组件
 import DiaryDetailDialog from './diaryDetailDialog.vue';
 
@@ -232,7 +242,8 @@ export default {
         diaries: [],
         allDiaries: [], // 存储所有数据用于筛选
         currentSort: { prop: '', order: '' }, // 当前排序状态
-        detailDiary: {} // dialog对话框中的详细日记数据
+        detailDiary: {}, // dialog对话框中的详细日记数据
+        exporting: false // 导出中状态
     };
   },
   computed: {
@@ -493,60 +504,43 @@ export default {
         name: '',
         class: '',
         mood: '',
-        dateRange: []
+        dateRange: [],
+        account: ''
       };
       this.currentSort = { prop: '', order: '' };
       this.currentPage = 1;
     },
     
-    // 导出数据为Excel
-    exportData() {
-        const filteredDiaries = this.getFilteredDiaries();
-        
-        if (filteredDiaries.length === 0) {
-            this.$message.warning('没有数据可导出');
-            return;
-        }
-        
-        try {
-            // 准备导出数据
-            const exportData = filteredDiaries.map(diary => ({
-                姓名: diary.username || '',
-                班级: diary.real_class || '',
-                压力指数: (diary.stress || 0) * 2 + '级',
-                心情: this.getMoodName(diary.mood) || '',
-                提交时间: diary.create_time || '',
-                日记内容: diary.content || ''
-            }));
-            
-            // 创建工作簿
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(exportData);
-            
-            // 设置列宽
-            const colWidths = [
-                { wch: 10 }, // 姓名
-                { wch: 20 }, // 班级
-                { wch: 10 }, // 压力指数
-                { wch: 10 }, // 心情
-                { wch: 20 }, // 提交时间
-                { wch: 50 }  // 日记内容
-            ];
-            ws['!cols'] = colWidths;
-            
-            // 添加工作表到工作簿
-            XLSX.utils.book_append_sheet(wb, ws, '心灵日记数据');
-            
-            // 生成Excel文件并下载
-            const today = new Date();
-            const dateStr = today.toISOString().split('T')[0];
-            XLSX.writeFile(wb, `心灵日记数据_${dateStr}.xlsx`);
-            
-            this.$message.success('数据导出成功');
-        } catch (error) {
-            console.error('导出数据失败:', error);
-            this.$message.error('数据导出失败');
-        }
+    // 当前筛选条件透传给服务端导出接口，保证导出范围与页面一致
+    getExportParams() {
+      const params = {
+        name: this.filterParams.name,
+        class_name: this.filterParams.class,
+        mood: this.filterParams.mood,
+        account: this.filterParams.account
+      };
+      if (this.filterParams.dateRange && this.filterParams.dateRange.length === 2) {
+        params.start_date = this.filterParams.dateRange[0];
+        params.end_date = this.filterParams.dateRange[1];
+      }
+      return params;
+    },
+
+    // 导出数据：服务端完成权限校验、私密日记脱敏与字段组装
+    handleExportCommand(command) {
+      if (command !== 'excel' && command !== 'csv') return;
+      this.exporting = true;
+      const params = this.getExportParams();
+      const task = command === 'csv'
+        ? exportCsvZip(this.$axios, 'diaries', params)
+        : exportExcel(this.$axios, 'diaries', params);
+      task.then(() => {
+        this.$message.success('日记数据导出成功');
+      }).catch(error => {
+        handleExportError(this, error);
+      }).finally(() => {
+        this.exporting = false;
+      });
     }
   }
 };

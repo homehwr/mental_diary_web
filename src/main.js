@@ -19,7 +19,7 @@ Vue.config.productionTip = false
 
 const testUrl = 'http://localhost:8000';
 
-const web = 'http://parliy.com:89/api';
+const web = 'http://42.194.183.221:89/api';
 
 // const trueUrl = testUrl;
 

@@ -82,6 +82,10 @@ const routes = [
           component: () => import(/* webpackChunkName: "manage" */ "../components/manage/statistics.vue")
       },
       {
+          path: "dataExport",
+          component: () => import(/* webpackChunkName: "manage" */ "../components/manage/dataExport.vue")
+      },
+      {
         path: "UserList",
         component: () => import(/* webpackChunkName: "manage" */ "../components/manage/UserList.vue")
       }
