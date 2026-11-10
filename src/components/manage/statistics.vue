@@ -25,10 +25,12 @@
       <div class="analytics-toolbar">
         <h2 class="analytics-title">日记数据分析</h2>
         <div class="toolbar-actions">
-          <el-select v-model="exportDays" size="small" style="width: 115px;" @change="loadNewAnalytics">
+          <el-select v-model="exportDays" size="small" style="width: 130px;" @change="loadNewAnalytics">
+            <el-option label="全部时间" :value="0"></el-option>
             <el-option label="近 7 天" :value="7"></el-option>
             <el-option label="近 30 天" :value="30"></el-option>
             <el-option label="近 90 天" :value="90"></el-option>
+            <el-option label="近 365 天" :value="365"></el-option>
           </el-select>
           <el-button
             type="primary"
@@ -45,6 +47,14 @@
             :disabled="!hasPermission"
             @click="exportAnalysisResult('csv')"
           >CSV</el-button>
+          <el-button
+            size="small"
+            type="warning"
+            icon="el-icon-document"
+            :loading="exportingPdf"
+            :disabled="!hasPermission"
+            @click="exportAnalysisResult('pdf')"
+          >PDF 报告</el-button>
         </div>
       </div>
       
@@ -252,7 +262,7 @@
 <script>
 import * as echarts from 'echarts';
 import 'echarts-wordcloud';
-import { exportExcel, exportCsvZip, fetchAnalysisOverview, handleExportError } from '@/utils/export';
+import { exportExcel, exportServerFile, exportAnalysisPdf, fetchAnalysisOverview, handleExportError } from '@/utils/export';
 
 // 数据缓存
 const dataCache = {
@@ -293,9 +303,10 @@ export default {
       relationChart: null,
       chartsInitialized: false,
       // 新增分析维度与导出
-      exportDays: 30,
+      exportDays: 0,
       exportingExcel: false,
       exportingCsv: false,
+      exportingPdf: false,
       overviewLoading: false,
       newAnalytics: {
         overview: [],
@@ -343,7 +354,7 @@ export default {
     async loadNewAnalytics() {
       this.overviewLoading = true;
       try {
-        this.newAnalytics = await fetchAnalysisOverview(this.$axios, this.exportDays);
+        this.newAnalytics = await fetchAnalysisOverview(this.$axios, { days: this.exportDays });
       } catch (error) {
         console.error('新增分析数据加载失败:', error);
         handleExportError(this, error);
@@ -352,20 +363,27 @@ export default {
       }
     },
 
-    // 导出数据分析结果
+    // 导出数据分析结果（Excel / CSV 压缩包 / PDF 报告）
     exportAnalysisResult(format) {
       if (!this.hasPermission) {
         this.$message.error('当前账号无数据导出权限');
         return;
       }
-      const flag = format === 'csv' ? 'exportingCsv' : 'exportingExcel';
+      if (['excel', 'csv', 'pdf'].indexOf(format) < 0) return;
+      const flag = format === 'pdf' ? 'exportingPdf'
+        : (format === 'csv' ? 'exportingCsv' : 'exportingExcel');
       this[flag] = true;
       const params = { days: this.exportDays };
-      const task = format === 'csv'
-        ? exportCsvZip(this.$axios, 'analysis', params)
-        : exportExcel(this.$axios, 'analysis', params);
+      let task;
+      if (format === 'pdf') {
+        task = exportAnalysisPdf(this.$axios, params);
+      } else if (format === 'csv') {
+        task = exportServerFile(this.$axios, 'analysis', params);
+      } else {
+        task = exportExcel(this.$axios, 'analysis', params);
+      }
       task.then(() => {
-        this.$message.success('数据分析结果导出成功');
+        this.$message.success(format === 'pdf' ? 'PDF 分析报告导出成功' : '数据分析结果导出成功');
       }).catch(error => {
         handleExportError(this, error);
       }).finally(() => {

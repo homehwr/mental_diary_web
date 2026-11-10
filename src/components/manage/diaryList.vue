@@ -94,7 +94,7 @@
               </el-button>
               <el-dropdown-menu slot="dropdown">
                 <el-dropdown-item command="excel">导出 Excel（推荐）</el-dropdown-item>
-                <el-dropdown-item command="csv">导出 CSV 压缩包</el-dropdown-item>
+                <el-dropdown-item command="csv">导出 CSV 文件</el-dropdown-item>
               </el-dropdown-menu>
             </el-dropdown>
           </el-tooltip>
@@ -204,7 +204,7 @@
 
 <script>
 // 数据导出（服务端完成权限校验与隐私脱敏）
-import { exportExcel, exportCsvZip, handleExportError } from '@/utils/export';
+import { exportExcel, exportServerFile, handleExportError } from '@/utils/export';
 // 导入日记详情弹窗组件
 import DiaryDetailDialog from './diaryDetailDialog.vue';
 
@@ -532,7 +532,7 @@ export default {
       this.exporting = true;
       const params = this.getExportParams();
       const task = command === 'csv'
-        ? exportCsvZip(this.$axios, 'diaries', params)
+        ? exportServerFile(this.$axios, 'diaries', params)
         : exportExcel(this.$axios, 'diaries', params);
       task.then(() => {
         this.$message.success('日记数据导出成功');

@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx';
 const DIARIES_PATH = '/export/diaries';
 const ANALYSIS_PATH = '/export/analysis';
 const OVERVIEW_PATH = '/export/analysis-overview';
+const PDF_PATH = '/export/analysis-pdf';
 
 // 登录后 token 存于 localStorage.token；兼容旧版 auth_token
 function authHeaders() {
@@ -83,18 +84,16 @@ export function exportExcel(axiosInstance, type, params) {
   });
 }
 
-/** 服务端直出的 CSV 压缩包通道，不依赖前端组装 */
-export function exportCsvZip(axiosInstance, type, params) {
-  const path = type === 'analysis' ? ANALYSIS_PATH : DIARIES_PATH;
-  const label = type === 'analysis' ? '分析报告' : '日记数据';
-  const filename = '格致心灵日记_' + label + '_' + timeStamp() + '.zip';
+/** 服务端直出的文件下载（CSV / ZIP / PDF 共用） */
+function downloadServerFile(axiosInstance, path, params, filename) {
   return axiosInstance.get(path, {
-    params: cleanParams(Object.assign({}, params, { format: 'csv' })),
+    params: cleanParams(params),
     headers: authHeaders(),
     responseType: 'blob'
   }).then(res => new Promise((resolve, reject) => {
     const blob = res.data;
     const blobType = blob && blob.type ? blob.type : '';
+    // 后端鉴权失败或生成失败时返回 JSON，需要解析出具体提示
     if (blobType.indexOf('application/json') >= 0) {
       const reader = new FileReader();
       reader.onload = () => {
@@ -118,10 +117,38 @@ export function exportCsvZip(axiosInstance, type, params) {
   }));
 }
 
+/**
+ * 服务端直出通道：日记导出为单个 CSV，分析报告为多分表 CSV 压缩包。
+ * 不依赖前端组装，便于脚本与归档使用。
+ */
+export function exportServerFile(axiosInstance, type, params) {
+  const isAnalysis = type === 'analysis';
+  const path = isAnalysis ? ANALYSIS_PATH : DIARIES_PATH;
+  const label = isAnalysis ? '分析报告' : '日记数据';
+  const ext = isAnalysis ? 'zip' : 'csv';
+  return downloadServerFile(
+    axiosInstance,
+    path,
+    Object.assign({}, params, { format: 'csv' }),
+    '格致心灵日记_' + label + '_' + timeStamp() + '.' + ext
+  );
+}
+
+/** 带图表的多页 PDF 分析报告（服务端生成） */
+export function exportAnalysisPdf(axiosInstance, params) {
+  return downloadServerFile(
+    axiosInstance,
+    PDF_PATH,
+    params,
+    '格致心灵日记_分析报告_' + timeStamp() + '.pdf'
+  );
+}
+
 /** 数据分析页展示用的新增分析维度 */
-export function fetchAnalysisOverview(axiosInstance, days) {
+export function fetchAnalysisOverview(axiosInstance, params) {
+  const query = (typeof params === 'number') ? { days: params } : (params || {});
   return axiosInstance.get(OVERVIEW_PATH, {
-    params: { days: days || 30 },
+    params: cleanParams(query),
     headers: authHeaders()
   }).then(res => {
     if (!res.data || res.data.success === false) {
